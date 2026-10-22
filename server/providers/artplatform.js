@@ -1,48 +1,44 @@
-// 美术中台 provider —— 桥接 arthub（中旭未来）
-// 鉴权：X-Token / X-API-KEY / Cookie(arthub_token)
-// 真实接口：/generate/image 和 /generate/video，需 service + modelName 字段
-
+// 美术中台（arthub）provider —— 已通过 router:3080 网关实测摸清全部接口
+// 内网网关 router:3080/api/gateway/arthub 透明注入身份（无需 key）
+// 公共域名 arthub.zx.com 需要 X-Token 鉴权（同一套接口）
 import { getRuntimeConfig } from '../config.js'
 
-// 模型 → service 映射（从 arthub 接口实际返回读取）
-const SERVICE_MAP = {
-  // 图片服务
-  'gpt-image-2': 'gpt_image_log',
-  'gpt-image-2.5-sunburst': 'gpt_image_log',
-  'gpt-image-2.5-flare': 'gpt_image_log',
-  'gemini-3-pro-image': 'gemini_image_log',
-  'gemini-3.1-flash-image': 'gemini_image_log',
-  'jimeng_t2i_v40': 'jimeng_image_log',
-  'jimeng_seedream46_cvtob': 'jimeng_image_log',
-  'kling-image-o1': 'keling_image_log',
-  'kling-v3-omni': 'keling_image_log',
-  'doubao-seedream-5-0-pro-260628': 'volcengine_image_log',
-  'qwen-image-3.0-pro': 'qwen_image_log',
-  'qwen-image-3.0': 'qwen_image_log',
-  // 视频服务
-  'kling-video-o1': 'keling_video_log',
-  'seedance-2.5': 'volcengine_video_log',
-  'seedance-2.0': 'volcengine_video_log',
-  'seedance-2.0-fast': 'volcengine_video_log',
-  'seedance-2.0-mini': 'volcengine_video_log',
-  'viduq2': 'vidu_video_log',
-  'happyhorse': 'happyhorse_video_log',
+// 模型 → service 路由（分图片/视频，同一模型名可能出现在两类）
+const SERVICE = {
+  image: {
+    'gpt-image-2': 'gpt_image_log',
+    'gpt-image-2.5-sunburst': 'gpt_image_log',
+    'gpt-image-2.5-flare': 'gpt_image_log',
+    'gemini-3-pro-image': 'gemini_image_log',
+    'gemini-3.1-flash-image': 'gemini_image_log',
+    'jimeng_t2i_v40': 'jimeng_image_log',
+    'jimeng_seedream46_cvtob': 'jimeng_image_log',
+    'kling-image-o1': 'keling_image_log',
+    'kling-v3-omni': 'keling_image_log',
+    'doubao-seedream-5-0-pro-260628': 'volcengine_image_log',
+    'qwen-image-3.0-pro': 'qwen_image_log',
+    'qwen-image-3.0': 'qwen_image_log',
+  },
+  video: {
+    'kling-v3-omni': 'keling_video_log',
+    'kling-video-o1': 'keling_video_log',
+    'doubao-seedance-1-5-pro-251215': 'volcengine_video_log',
+    'doubao-seedance-1-0-pro-250528': 'volcengine_video_log',
+    'doubao-seedance-1-0-lite-i2v-250428': 'volcengine_video_log',
+    'viduq2': 'vidu_video_log',
+    'happyhorse': 'happyhorse_video_log',
+    'MiniMax-H3': 'minimax_video_log',
+    'wan3.0-video': 'wan_video_log',
+    'wan3.0-video-prime': 'wan_video_log',
+  },
 }
 
-// 各能力对应的接口路径（arthub 真实路径）
-const ENDPOINTS = {
-  t2i: '/generate/image',
-  i2i: '/generate/image',
-  t2v: '/generate/video',
-  i2v: '/generate/video',
-  f2v: '/generate/video',
-}
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 
 function buildHeaders() {
   const { apiKey, authType } = getRuntimeConfig()
   const h = { 'Content-Type': 'application/json' }
   const key = apiKey
-
   if (authType === 'xtoken' && key) {
     h['X-Token'] = key
     h['X-API-KEY'] = key
@@ -54,90 +50,90 @@ function buildHeaders() {
   return h
 }
 
-function buildUrl(endpoint) {
+function buildUrl(path) {
   const { baseUrl } = getRuntimeConfig()
-  return (baseUrl || 'https://arthub.zx.com') + endpoint
+  return (baseUrl || 'https://arthub.zx.com') + path
 }
 
-// 把通用 payload 映射为美术中台的请求体
-function buildBody(payload) {
-  const { model, prompt, images, firstImage, lastImage } = payload
-  const { imageSize, quality } = getRuntimeConfig()
-  const body = { prompt }
-
-  // service + modelName（arthub 要求）
-  if (model) {
-    body.modelName = model
-    const service = SERVICE_MAP[model]
-    if (service) body.service = service
+async function post(path, body) {
+  const res = await fetch(buildUrl(path), {
+    method: 'POST',
+    headers: buildHeaders(),
+    body: JSON.stringify(body),
+  })
+  if (!res.ok) {
+    const t = await res.text().catch(() => '')
+    throw new Error(`HTTP ${res.status}: ${t.slice(0, 300)}`)
   }
-
-  // 图片尺寸（arthub 要求 imageSize 字段）
-  if (imageSize) body.imageSize = imageSize
-
-  // 生成质量（arthub 要求 quality：high/medium/low，2.5 支持 xhigh/max）
-  if (quality) body.quality = quality
-
-  // 图生图/图生视频：加参考图
-  if (images && images.length > 0) {
-    body.image = images[0]
-    if (images.length > 1) body.images = images
-  }
-
-  // 首尾帧生视频
-  if (firstImage) body.first_frame = firstImage
-  if (lastImage) body.last_frame = lastImage
-
-  return body
-}
-
-// 解析返回结果
-function parseResponse(type, data) {
-  // arthub 返回格式：{ code: 0, message: "...", data: { url: "..." } }
+  const data = await res.json()
   if (data && typeof data.code === 'number' && data.code !== 0) {
-    throw new Error(`美术中台错误: ${data.message || `code=${data.code}`}`)
+    throw new Error(data.message || `code=${data.code}`)
   }
+  return data
+}
 
-  const url =
-    data?.data?.url ||
-    data?.data?.video_url ||
-    data?.data?.image_url ||
-    data?.url ||
-    data?.video_url ||
-    data?.image_url ||
-    null
-
-  if (!url) {
-    // 返回里没 URL 时，把整个返回丢给前端看，便于定位
-    throw new Error('美术中台返回结果中没有 URL: ' + JSON.stringify(data).slice(0, 300))
+// 解析结果里的 URL（images/ImageURLs/videos 是 JSON 字符串数组）
+function parseUrls(item) {
+  const fields = ['ImageURLs', 'images', 'videos', 'videoList', 'videoUrl', 'imageUrl', 'playUrl']
+  for (const f of fields) {
+    const v = item?.[f]
+    if (v == null || v === '' || v === '[]') continue
+    if (typeof v === 'string') {
+      try {
+        const arr = JSON.parse(v)
+        if (Array.isArray(arr) && arr.length) return arr
+      } catch {
+        return [v]
+      }
+    }
+    if (Array.isArray(v) && v.length) return v
   }
-
-  const kind = type === 't2v' || type === 'i2v' || type === 'f2v' ? 'video' : 'image'
-  return { kind, url }
+  return []
 }
 
 export async function artplatformGenerate(payload) {
-  const endpoint = ENDPOINTS[payload.type]
-  if (!endpoint) throw new Error(`未知任务类型: ${payload.type}`)
+  const isVideo = payload.type === 't2v' || payload.type === 'i2v' || payload.type === 'f2v'
+  const kind = isVideo ? 'video' : 'image'
+  const model = payload.model
+  const service = SERVICE[kind]?.[model]
+  if (!service) throw new Error(`模型「${model}」未映射到 ${kind} 的 service（需在 SERVICE 表里补充）`)
 
-  const url = buildUrl(endpoint)
-  const headers = buildHeaders()
-  const body = buildBody(payload)
-
-  console.log(`[artplatform] ${payload.type} -> ${url}`)
-  console.log(`[artplatform] body keys:`, Object.keys(body))
-
-  const res = await fetch(url, {
-    method: 'POST',
-    headers,
-    body: JSON.stringify(body),
-  })
-
-  if (!res.ok) {
-    const text = await res.text().catch(() => '')
-    throw new Error(`美术中台返回 ${res.status}: ${text.slice(0, 300)}`)
+  const body = { service, modelName: model, prompt: payload.prompt || '' }
+  if (isVideo) {
+    body.videoCount = payload.n || 1
+    body.aspectRatio = payload.ratio || '16:9'
+    body.duration = payload.duration || 5
+    if (payload.firstImage) {
+      // 首尾帧：image（字符串）+ imageTail（字符串）
+      body.image = payload.firstImage
+      if (payload.lastImage) body.imageTail = payload.lastImage
+    } else if (payload.images?.length) {
+      // 图生视频：imageUrls（数组）
+      body.imageUrls = payload.images
+    }
+  } else {
+    const cfg = getRuntimeConfig()
+    body.imageSize = cfg.imageSize || '1024x1024'
+    body.quality = cfg.quality || 'high'
+    body.n = payload.n || 1
+    body.outputFormat = 'png'
+    // 图生图：imageUrls（数组）
+    if (payload.images?.length) body.imageUrls = payload.images
   }
 
-  const data = await res.json()
-  return parseResponse(payload.type, data)
+  const t = await post('/generate/' + kind, body)
+  const id = t?.data?.id
+  if (!id) throw new Error('未取到任务 ID: ' + JSON.stringify(t).slice(0, 200))
+
+  // 轮询结果（status: submitted → processing → succeed / failed）
+  for (let i = 0; i < 150; i++) {
+    await sleep(4000)
+    const r = await post('/generate/' + kind + 'Result', { provider: service, id })
+    const item = r?.data?.list?.[0] || {}
+    const urls = parseUrls(item)
+    if (urls.length) return { kind, url: urls[0], urls }
+    if (item.status === 'failed') throw new Error(item.statusMsg || '生成失败')
+    if (item.status === 'succeed') throw new Error('任务完成但未解析到结果: ' + JSON.stringify(item).slice(0, 200))
+  }
+  throw new Error('轮询超时（约 10 分钟）')
 }
