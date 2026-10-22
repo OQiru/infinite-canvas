@@ -1,0 +1,17 @@
+# 依赖
+node_modules/
+
+# 构建产物
+dist/
+
+# 环境与密钥（绝不上传）
+.env
+server/.env
+server/config.json
+
+# 打包文件
+*.zip
+
+# 系统文件
+.DS_Store
+Thumbs.db

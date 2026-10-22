@@ -1,0 +1,20 @@
+{
+  "name": "infinite-canvas",
+  "version": "0.1.0",
+  "private": true,
+  "description": "LibTV-style infinite canvas for local AI art workflow, bridged to company art mid-platform",
+  "workspaces": [
+    "client",
+    "server"
+  ],
+  "scripts": {
+    "dev": "concurrently -n server,client -c blue,green \"npm:dev:server\" \"npm:dev:client\"",
+    "dev:client": "npm --workspace client run dev",
+    "dev:server": "npm --workspace server run dev",
+    "build": "npm --workspace client run build",
+    "start": "npm --workspace server run start"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0"
+  }
+}
