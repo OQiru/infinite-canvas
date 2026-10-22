@@ -28,6 +28,7 @@ app.get('/api/config', (req, res) => {
   res.json({
     baseUrl: c.baseUrl,
     authType: c.authType,
+    imageSize: c.imageSize,
     configured: isConfigured(),
     apiKeyMasked: masked,
   })
@@ -35,11 +36,12 @@ app.get('/api/config', (req, res) => {
 
 // 保存配置（网页里填的 API key 会持久化到 server/config.json）
 app.post('/api/config', (req, res) => {
-  const { apiKey, baseUrl, authType } = req.body || {}
+  const { apiKey, baseUrl, authType, imageSize } = req.body || {}
   const patch = {}
   if (typeof apiKey === 'string' && apiKey.trim()) patch.apiKey = apiKey.trim()
   if (typeof baseUrl === 'string' && baseUrl.trim()) patch.baseUrl = baseUrl.trim()
   if (typeof authType === 'string' && authType.trim()) patch.authType = authType.trim()
+  if (typeof imageSize === 'string' && imageSize.trim()) patch.imageSize = imageSize.trim()
 
   if (Object.keys(patch).length === 0) {
     return res.status(400).json({ error: '没有需要保存的字段' })

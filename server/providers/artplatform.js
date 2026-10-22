@@ -36,10 +36,14 @@ function buildUrl(endpoint) {
 // 把通用 payload 映射为美术中台的请求体
 function buildBody(payload) {
   const { type, model, prompt, images, firstImage, lastImage } = payload
+  const { imageSize } = getRuntimeConfig()
   const body = { prompt }
   
   // 如果有指定模型，加上 model 字段
   if (model) body.model = model
+  
+  // 图片尺寸（arthub 要求 imageSize 字段）
+  if (imageSize) body.imageSize = imageSize
   
   // 图生图/图生视频：加参考图
   if (images && images.length > 0) {

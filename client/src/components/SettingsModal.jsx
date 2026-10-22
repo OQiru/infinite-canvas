@@ -4,6 +4,7 @@ import { getConfig, saveConfig } from '../api.js'
 export default function SettingsModal({ onClose, onSaved }) {
   const [baseUrl, setBaseUrl] = useState('')
   const [authType, setAuthType] = useState('xtoken')
+  const [imageSize, setImageSize] = useState('1024x1024')
   const [apiKey, setApiKey] = useState('')
   const [masked, setMasked] = useState('')
   const [configured, setConfigured] = useState(false)
@@ -16,6 +17,7 @@ export default function SettingsModal({ onClose, onSaved }) {
       .then((c) => {
         setBaseUrl(c.baseUrl || '')
         setAuthType(c.authType || 'xtoken')
+        setImageSize(c.imageSize || '1024x1024')
         setMasked(c.apiKeyMasked || '')
         setConfigured(c.configured)
       })
@@ -30,6 +32,7 @@ export default function SettingsModal({ onClose, onSaved }) {
       const patch = {}
       if (apiKey.trim()) patch.apiKey = apiKey.trim()
       if (baseUrl.trim()) patch.baseUrl = baseUrl.trim()
+      if (imageSize.trim()) patch.imageSize = imageSize.trim()
       patch.authType = authType
       const r = await saveConfig(patch)
       setMasked(r.apiKeyMasked || '')
@@ -79,6 +82,16 @@ export default function SettingsModal({ onClose, onSaved }) {
               <option value="apikey">X-API-KEY</option>
               <option value="cookie">Cookie (arthub_token)</option>
             </select>
+          </div>
+
+          <div className="field">
+            <label>图片尺寸（imageSize）</label>
+            <input
+              type="text"
+              placeholder="1024x1024"
+              value={imageSize}
+              onChange={(e) => setImageSize(e.target.value)}
+            />
           </div>
 
           {msg && <div className="msg ok">{msg}</div>}

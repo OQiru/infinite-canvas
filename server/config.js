@@ -14,6 +14,7 @@ const runtime = {
   baseUrl: process.env.ART_API_BASE_URL || 'https://arthub.zx.com',
   apiKey: process.env.ART_API_KEY || '',
   authType: process.env.ART_API_AUTH_TYPE || 'xtoken',
+  imageSize: process.env.ART_IMAGE_SIZE || '1024x1024',
   provider: 'mock',
 }
 
@@ -23,6 +24,7 @@ try {
   if (saved.apiKey) runtime.apiKey = saved.apiKey
   if (saved.baseUrl) runtime.baseUrl = saved.baseUrl
   if (saved.authType) runtime.authType = saved.authType
+  if (saved.imageSize) runtime.imageSize = saved.imageSize
 } catch {
   // 无 config.json 或解析失败，忽略
 }
@@ -37,12 +39,18 @@ export function setRuntimeConfig(patch) {
   if (patch.apiKey !== undefined) runtime.apiKey = patch.apiKey
   if (patch.baseUrl !== undefined) runtime.baseUrl = patch.baseUrl
   if (patch.authType !== undefined) runtime.authType = patch.authType
+  if (patch.imageSize !== undefined) runtime.imageSize = patch.imageSize
   runtime.provider = runtime.apiKey ? 'artplatform' : 'mock'
   try {
     fs.writeFileSync(
       CONFIG_FILE,
       JSON.stringify(
-        { baseUrl: runtime.baseUrl, apiKey: runtime.apiKey, authType: runtime.authType },
+        {
+          baseUrl: runtime.baseUrl,
+          apiKey: runtime.apiKey,
+          authType: runtime.authType,
+          imageSize: runtime.imageSize,
+        },
         null,
         2,
       ),
