@@ -15,6 +15,7 @@ const runtime = {
   apiKey: process.env.ART_API_KEY || '',
   authType: process.env.ART_API_AUTH_TYPE || 'xtoken',
   imageSize: process.env.ART_IMAGE_SIZE || '1024x1024',
+  quality: process.env.ART_QUALITY || 'high',
   provider: 'mock',
 }
 
@@ -25,6 +26,7 @@ try {
   if (saved.baseUrl) runtime.baseUrl = saved.baseUrl
   if (saved.authType) runtime.authType = saved.authType
   if (saved.imageSize) runtime.imageSize = saved.imageSize
+  if (saved.quality) runtime.quality = saved.quality
 } catch {
   // 无 config.json 或解析失败，忽略
 }
@@ -40,6 +42,7 @@ export function setRuntimeConfig(patch) {
   if (patch.baseUrl !== undefined) runtime.baseUrl = patch.baseUrl
   if (patch.authType !== undefined) runtime.authType = patch.authType
   if (patch.imageSize !== undefined) runtime.imageSize = patch.imageSize
+  if (patch.quality !== undefined) runtime.quality = patch.quality
   runtime.provider = runtime.apiKey ? 'artplatform' : 'mock'
   try {
     fs.writeFileSync(
@@ -50,6 +53,7 @@ export function setRuntimeConfig(patch) {
           apiKey: runtime.apiKey,
           authType: runtime.authType,
           imageSize: runtime.imageSize,
+          quality: runtime.quality,
         },
         null,
         2,

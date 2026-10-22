@@ -62,7 +62,7 @@ function buildUrl(endpoint) {
 // 把通用 payload 映射为美术中台的请求体
 function buildBody(payload) {
   const { model, prompt, images, firstImage, lastImage } = payload
-  const { imageSize } = getRuntimeConfig()
+  const { imageSize, quality } = getRuntimeConfig()
   const body = { prompt }
 
   // service + modelName（arthub 要求）
@@ -74,6 +74,9 @@ function buildBody(payload) {
 
   // 图片尺寸（arthub 要求 imageSize 字段）
   if (imageSize) body.imageSize = imageSize
+
+  // 生成质量（arthub 要求 quality：high/medium/low，2.5 支持 xhigh/max）
+  if (quality) body.quality = quality
 
   // 图生图/图生视频：加参考图
   if (images && images.length > 0) {

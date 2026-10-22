@@ -5,6 +5,7 @@ export default function SettingsModal({ onClose, onSaved }) {
   const [baseUrl, setBaseUrl] = useState('')
   const [authType, setAuthType] = useState('xtoken')
   const [imageSize, setImageSize] = useState('1024x1024')
+  const [quality, setQuality] = useState('high')
   const [apiKey, setApiKey] = useState('')
   const [masked, setMasked] = useState('')
   const [configured, setConfigured] = useState(false)
@@ -18,6 +19,7 @@ export default function SettingsModal({ onClose, onSaved }) {
         setBaseUrl(c.baseUrl || '')
         setAuthType(c.authType || 'xtoken')
         setImageSize(c.imageSize || '1024x1024')
+        setQuality(c.quality || 'high')
         setMasked(c.apiKeyMasked || '')
         setConfigured(c.configured)
       })
@@ -33,6 +35,7 @@ export default function SettingsModal({ onClose, onSaved }) {
       if (apiKey.trim()) patch.apiKey = apiKey.trim()
       if (baseUrl.trim()) patch.baseUrl = baseUrl.trim()
       if (imageSize.trim()) patch.imageSize = imageSize.trim()
+      if (quality.trim()) patch.quality = quality.trim()
       patch.authType = authType
       const r = await saveConfig(patch)
       setMasked(r.apiKeyMasked || '')
@@ -92,6 +95,17 @@ export default function SettingsModal({ onClose, onSaved }) {
               value={imageSize}
               onChange={(e) => setImageSize(e.target.value)}
             />
+          </div>
+
+          <div className="field">
+            <label>生成质量（quality）</label>
+            <select value={quality} onChange={(e) => setQuality(e.target.value)}>
+              <option value="high">high（高）</option>
+              <option value="medium">medium（中）</option>
+              <option value="low">low（低）</option>
+              <option value="xhigh">xhigh（超高，仅 2.5）</option>
+              <option value="max">max（最高，仅 2.5）</option>
+            </select>
           </div>
 
           {msg && <div className="msg ok">{msg}</div>}
